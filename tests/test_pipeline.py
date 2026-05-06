@@ -3,6 +3,7 @@ from pathlib import Path
 
 from gistory.config import GistoryConfig
 from gistory.pipeline import build_provider, generate_history
+from gistory.providers.bedrock import BedrockProvider
 from gistory.providers.openai_compatible import OpenAICompatibleProvider
 from gistory.providers.ollama import OllamaProvider
 
@@ -77,3 +78,25 @@ def test_build_provider_supports_openai_compatible_provider() -> None:
     assert provider.api_base == "https://example.test/v1"
     assert provider.api_key_env == "EXAMPLE_API_KEY"
     assert provider.timeout == 42.0
+
+
+def test_build_provider_supports_bedrock_provider() -> None:
+    config = GistoryConfig(
+        provider="bedrock",
+        model="us.anthropic.claude-3-5-haiku-20241022-v1:0",
+        bedrock_region="us-west-2",
+        bedrock_profile="work",
+        bedrock_timeout=77.0,
+        bedrock_max_tokens=300,
+        bedrock_temperature=0.1,
+    )
+
+    provider = build_provider(config)
+
+    assert isinstance(provider, BedrockProvider)
+    assert provider.model == "us.anthropic.claude-3-5-haiku-20241022-v1:0"
+    assert provider.region == "us-west-2"
+    assert provider.profile == "work"
+    assert provider.timeout == 77.0
+    assert provider.max_tokens == 300
+    assert provider.temperature == 0.1

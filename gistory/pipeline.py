@@ -5,6 +5,7 @@ from pathlib import Path
 from gistory.config import GistoryConfig
 from gistory.git_reader import GitReader
 from gistory.markdown import CommitSummary, group_by_month, render_markdown
+from gistory.providers.bedrock import BedrockProvider
 from gistory.providers.base import SummaryProvider
 from gistory.providers.mock import MockProvider
 from gistory.providers.openai_compatible import OpenAICompatibleProvider
@@ -27,6 +28,15 @@ def build_provider(config: GistoryConfig) -> SummaryProvider:
             api_base=str(config.api_base),
             api_key_env=config.api_key_env,
             timeout=config.api_timeout,
+        )
+    if config.provider == "bedrock":
+        return BedrockProvider(
+            model=config.model,
+            region=config.bedrock_region,
+            profile=config.bedrock_profile,
+            timeout=config.bedrock_timeout,
+            max_tokens=config.bedrock_max_tokens,
+            temperature=config.bedrock_temperature,
         )
     raise RuntimeError(f"Unsupported provider: {config.provider}")
 

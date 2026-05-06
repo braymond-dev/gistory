@@ -22,6 +22,11 @@ def _config_with_overrides(
     api_base: Optional[str] = None,
     api_key_env: Optional[str] = None,
     api_timeout: Optional[float] = None,
+    bedrock_region: Optional[str] = None,
+    bedrock_profile: Optional[str] = None,
+    bedrock_timeout: Optional[float] = None,
+    bedrock_max_tokens: Optional[int] = None,
+    bedrock_temperature: Optional[float] = None,
 ) -> GistoryConfig:
     try:
         config = load_config(config_path)
@@ -42,6 +47,16 @@ def _config_with_overrides(
             updates["api_key_env"] = api_key_env
         if api_timeout is not None:
             updates["api_timeout"] = api_timeout
+        if bedrock_region:
+            updates["bedrock_region"] = bedrock_region
+        if bedrock_profile:
+            updates["bedrock_profile"] = bedrock_profile
+        if bedrock_timeout is not None:
+            updates["bedrock_timeout"] = bedrock_timeout
+        if bedrock_max_tokens is not None:
+            updates["bedrock_max_tokens"] = bedrock_max_tokens
+        if bedrock_temperature is not None:
+            updates["bedrock_temperature"] = bedrock_temperature
         return GistoryConfig.model_validate(config.model_dump() | updates)
     except (RuntimeError, ValidationError) as exc:
         raise typer.BadParameter(str(exc)) from exc
@@ -65,13 +80,18 @@ def generate(
     since: Optional[str] = typer.Option(None, "--since", help='Git date expression, e.g. "30 days ago".'),
     revision_range: Optional[str] = typer.Option(None, "--range", help='Git revision range, e.g. "HEAD~20..HEAD".'),
     out: Optional[str] = typer.Option(None, "--out", help="Output Markdown file."),
-    provider: Optional[str] = typer.Option(None, "--provider", help="Provider name: ollama, openai-compatible, or mock."),
+    provider: Optional[str] = typer.Option(None, "--provider", help="Provider name: ollama, openai-compatible, bedrock, or mock."),
     model: Optional[str] = typer.Option(None, "--model", help="Provider model name."),
     ollama_url: Optional[str] = typer.Option(None, "--ollama-url", help="Ollama base URL."),
     ollama_timeout: Optional[float] = typer.Option(None, "--ollama-timeout", help="Ollama request timeout in seconds."),
     api_base: Optional[str] = typer.Option(None, "--api-base", help="OpenAI-compatible API base URL."),
     api_key_env: Optional[str] = typer.Option(None, "--api-key-env", help="Environment variable containing the API key."),
     api_timeout: Optional[float] = typer.Option(None, "--api-timeout", help="Remote API request timeout in seconds."),
+    bedrock_region: Optional[str] = typer.Option(None, "--bedrock-region", help="AWS region for Bedrock Runtime."),
+    bedrock_profile: Optional[str] = typer.Option(None, "--bedrock-profile", help="AWS profile name for Bedrock."),
+    bedrock_timeout: Optional[float] = typer.Option(None, "--bedrock-timeout", help="Bedrock request timeout in seconds."),
+    bedrock_max_tokens: Optional[int] = typer.Option(None, "--bedrock-max-tokens", help="Maximum Bedrock response tokens."),
+    bedrock_temperature: Optional[float] = typer.Option(None, "--bedrock-temperature", help="Bedrock generation temperature."),
     config: Path = typer.Option(Path(".gistory.yml"), "--config", help="Path to config file."),
 ) -> None:
     """Generate a GISTORY.md file."""
@@ -85,6 +105,11 @@ def generate(
         api_base=api_base,
         api_key_env=api_key_env,
         api_timeout=api_timeout,
+        bedrock_region=bedrock_region,
+        bedrock_profile=bedrock_profile,
+        bedrock_timeout=bedrock_timeout,
+        bedrock_max_tokens=bedrock_max_tokens,
+        bedrock_temperature=bedrock_temperature,
     )
     try:
         markdown = generate_history(selected, revision_range=revision_range, since=since)
@@ -97,13 +122,18 @@ def generate(
 @app.command()
 def explain(
     revision_range: str = typer.Option(..., "--range", help='Git revision range, e.g. "HEAD~10..HEAD".'),
-    provider: Optional[str] = typer.Option(None, "--provider", help="Provider name: ollama, openai-compatible, or mock."),
+    provider: Optional[str] = typer.Option(None, "--provider", help="Provider name: ollama, openai-compatible, bedrock, or mock."),
     model: Optional[str] = typer.Option(None, "--model", help="Provider model name."),
     ollama_url: Optional[str] = typer.Option(None, "--ollama-url", help="Ollama base URL."),
     ollama_timeout: Optional[float] = typer.Option(None, "--ollama-timeout", help="Ollama request timeout in seconds."),
     api_base: Optional[str] = typer.Option(None, "--api-base", help="OpenAI-compatible API base URL."),
     api_key_env: Optional[str] = typer.Option(None, "--api-key-env", help="Environment variable containing the API key."),
     api_timeout: Optional[float] = typer.Option(None, "--api-timeout", help="Remote API request timeout in seconds."),
+    bedrock_region: Optional[str] = typer.Option(None, "--bedrock-region", help="AWS region for Bedrock Runtime."),
+    bedrock_profile: Optional[str] = typer.Option(None, "--bedrock-profile", help="AWS profile name for Bedrock."),
+    bedrock_timeout: Optional[float] = typer.Option(None, "--bedrock-timeout", help="Bedrock request timeout in seconds."),
+    bedrock_max_tokens: Optional[int] = typer.Option(None, "--bedrock-max-tokens", help="Maximum Bedrock response tokens."),
+    bedrock_temperature: Optional[float] = typer.Option(None, "--bedrock-temperature", help="Bedrock generation temperature."),
     config: Path = typer.Option(Path(".gistory.yml"), "--config", help="Path to config file."),
 ) -> None:
     """Explain a commit range and print the narrative to stdout."""
@@ -116,6 +146,11 @@ def explain(
         api_base=api_base,
         api_key_env=api_key_env,
         api_timeout=api_timeout,
+        bedrock_region=bedrock_region,
+        bedrock_profile=bedrock_profile,
+        bedrock_timeout=bedrock_timeout,
+        bedrock_max_tokens=bedrock_max_tokens,
+        bedrock_temperature=bedrock_temperature,
     )
     try:
         markdown = generate_history(selected, revision_range=revision_range)

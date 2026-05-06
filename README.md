@@ -29,6 +29,7 @@ gistory generate --provider ollama --model qwen3:8b
 gistory generate --ollama-url http://localhost:11434
 gistory generate --ollama-timeout 300
 gistory generate --provider openai-compatible --model gpt-4.1-mini
+gistory generate --provider bedrock --model us.anthropic.claude-3-5-haiku-20241022-v1:0 --bedrock-region us-east-1
 ```
 
 Explain a range without writing a file:
@@ -50,6 +51,11 @@ ollama_timeout: 300
 api_base: https://api.openai.com/v1
 api_key_env: OPENAI_API_KEY
 api_timeout: 120
+bedrock_region: us-east-1
+bedrock_profile: null
+bedrock_timeout: 120
+bedrock_max_tokens: 500
+bedrock_temperature: 0.2
 group_by: month
 ignore:
   - package-lock.json
@@ -94,6 +100,20 @@ gistory generate --provider openai-compatible --model gpt-4.1-mini
 
 Any service that supports the OpenAI chat completions shape can be used by
 changing `api_base`, `api_key_env`, and `model`.
+
+For AWS Bedrock, authenticate with normal AWS credentials or SSO, then use the
+Bedrock provider:
+
+```bash
+aws sso login --profile work
+gistory generate \
+  --provider bedrock \
+  --model us.anthropic.claude-3-5-haiku-20241022-v1:0 \
+  --bedrock-region us-east-1 \
+  --bedrock-profile work
+```
+
+If your environment uses default AWS credentials, omit `--bedrock-profile`.
 
 ## Development
 
