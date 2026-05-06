@@ -24,6 +24,7 @@ Generate a history file:
 gistory generate
 gistory generate --since "30 days ago"
 gistory generate --range "HEAD~20..HEAD"
+gistory generate --repo ../wikiwatch
 gistory generate --out GISTORY.md
 gistory generate --append
 gistory generate --provider ollama --model qwen3:8b

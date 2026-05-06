@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from time import monotonic
 from typing import Optional
 
 import typer
@@ -10,6 +11,16 @@ from gistory.config import GistoryConfig, load_config, write_default_config
 from gistory.pipeline import generate_history, generate_history_append_only, write_history
 
 app = typer.Typer(help="Generate a narrative Markdown history from Git commits.")
+
+
+def format_duration(seconds: float) -> str:
+    total_seconds = max(0, round(seconds))
+    minutes, remaining_seconds = divmod(total_seconds, 60)
+    parts: list[str] = []
+    if minutes:
+        parts.append(f"{minutes} min" if minutes == 1 else f"{minutes} mins")
+    parts.append(f"{remaining_seconds} sec" if remaining_seconds == 1 else f"{remaining_seconds} secs")
+    return " ".join(parts)
 
 
 def _config_with_overrides(
@@ -110,6 +121,7 @@ def init(
 
 @app.command()
 def generate(
+    repo: Path = typer.Option(Path("."), "--repo", help="Path to the Git repository to read."),
     since: Optional[str] = typer.Option(None, "--since", help='Git date expression, e.g. "30 days ago".'),
     revision_range: Optional[str] = typer.Option(None, "--range", help='Git revision range, e.g. "HEAD~20..HEAD".'),
     out: Optional[str] = typer.Option(None, "--out", help="Output Markdown file."),
@@ -167,18 +179,23 @@ def generate(
         vertex_temperature=vertex_temperature,
     )
     try:
+        started_at = monotonic()
         if selected.append_only:
-            markdown = generate_history_append_only(selected, revision_range=revision_range, since=since)
+            markdown = generate_history_append_only(selected, repo_path=repo, revision_range=revision_range, since=since)
         else:
-            markdown = generate_history(selected, revision_range=revision_range, since=since)
-        write_history(markdown, selected.output)
+            markdown = generate_history(selected, repo_path=repo, revision_range=revision_range, since=since)
+        output_path = Path(selected.output)
+        if not output_path.is_absolute():
+            output_path = repo / output_path
+        write_history(markdown, output_path)
     except (RuntimeError, ValueError) as exc:
         raise typer.BadParameter(str(exc)) from exc
-    typer.echo(f"Wrote {selected.output}")
+    typer.echo(f"Wrote {selected.output} took {format_duration(monotonic() - started_at)}")
 
 
 @app.command()
 def explain(
+    repo: Path = typer.Option(Path("."), "--repo", help="Path to the Git repository to read."),
     revision_range: str = typer.Option(..., "--range", help='Git revision range, e.g. "HEAD~10..HEAD".'),
     provider: Optional[str] = typer.Option(None, "--provider", help="Provider name: ollama, openai-compatible, bedrock, azure, vertex, or mock."),
     model: Optional[str] = typer.Option(None, "--model", help="Provider model name."),
@@ -231,7 +248,7 @@ def explain(
         vertex_temperature=vertex_temperature,
     )
     try:
-        markdown = generate_history(selected, revision_range=revision_range)
+        markdown = generate_history(selected, repo_path=repo, revision_range=revision_range)
     except (RuntimeError, ValueError) as exc:
         raise typer.BadParameter(str(exc)) from exc
     typer.echo(markdown)

@@ -69,5 +69,5 @@ def write_default_config(path: Path = Path(".gistory.yml"), overwrite: bool = Fa
     if path.exists() and not overwrite:
         raise FileExistsError(f"{path} already exists")
     config = default_config()
-    data = config.model_dump()
+    data = config.model_dump(mode="json")
     path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
