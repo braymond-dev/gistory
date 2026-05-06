@@ -3,9 +3,11 @@ from pathlib import Path
 
 from gistory.config import GistoryConfig
 from gistory.pipeline import build_provider, generate_history
+from gistory.providers.azure import AzureProvider
 from gistory.providers.bedrock import BedrockProvider
 from gistory.providers.openai_compatible import OpenAICompatibleProvider
 from gistory.providers.ollama import OllamaProvider
+from gistory.providers.vertex import VertexProvider
 
 
 def git(repo: Path, *args: str) -> None:
@@ -100,3 +102,47 @@ def test_build_provider_supports_bedrock_provider() -> None:
     assert provider.timeout == 77.0
     assert provider.max_tokens == 300
     assert provider.temperature == 0.1
+
+
+def test_build_provider_supports_azure_provider() -> None:
+    config = GistoryConfig(
+        provider="azure",
+        model="my-deployment",
+        azure_endpoint="https://example.services.ai.azure.com/models",
+        azure_api_key_env="AZURE_KEY",
+        azure_timeout=33.0,
+        azure_max_tokens=250,
+        azure_temperature=0.3,
+    )
+
+    provider = build_provider(config)
+
+    assert isinstance(provider, AzureProvider)
+    assert provider.model == "my-deployment"
+    assert provider.endpoint == "https://example.services.ai.azure.com/models"
+    assert provider.api_key_env == "AZURE_KEY"
+    assert provider.timeout == 33.0
+    assert provider.max_tokens == 250
+    assert provider.temperature == 0.3
+
+
+def test_build_provider_supports_vertex_provider() -> None:
+    config = GistoryConfig(
+        provider="vertex",
+        model="gemini-2.5-flash",
+        vertex_project="my-project",
+        vertex_location="us-central1",
+        vertex_timeout=44.0,
+        vertex_max_tokens=350,
+        vertex_temperature=0.4,
+    )
+
+    provider = build_provider(config)
+
+    assert isinstance(provider, VertexProvider)
+    assert provider.model == "gemini-2.5-flash"
+    assert provider.project == "my-project"
+    assert provider.location == "us-central1"
+    assert provider.timeout == 44.0
+    assert provider.max_tokens == 350
+    assert provider.temperature == 0.4

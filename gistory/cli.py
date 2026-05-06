@@ -27,6 +27,16 @@ def _config_with_overrides(
     bedrock_timeout: Optional[float] = None,
     bedrock_max_tokens: Optional[int] = None,
     bedrock_temperature: Optional[float] = None,
+    azure_endpoint: Optional[str] = None,
+    azure_api_key_env: Optional[str] = None,
+    azure_timeout: Optional[float] = None,
+    azure_max_tokens: Optional[int] = None,
+    azure_temperature: Optional[float] = None,
+    vertex_project: Optional[str] = None,
+    vertex_location: Optional[str] = None,
+    vertex_timeout: Optional[float] = None,
+    vertex_max_tokens: Optional[int] = None,
+    vertex_temperature: Optional[float] = None,
 ) -> GistoryConfig:
     try:
         config = load_config(config_path)
@@ -57,6 +67,26 @@ def _config_with_overrides(
             updates["bedrock_max_tokens"] = bedrock_max_tokens
         if bedrock_temperature is not None:
             updates["bedrock_temperature"] = bedrock_temperature
+        if azure_endpoint:
+            updates["azure_endpoint"] = azure_endpoint
+        if azure_api_key_env:
+            updates["azure_api_key_env"] = azure_api_key_env
+        if azure_timeout is not None:
+            updates["azure_timeout"] = azure_timeout
+        if azure_max_tokens is not None:
+            updates["azure_max_tokens"] = azure_max_tokens
+        if azure_temperature is not None:
+            updates["azure_temperature"] = azure_temperature
+        if vertex_project:
+            updates["vertex_project"] = vertex_project
+        if vertex_location:
+            updates["vertex_location"] = vertex_location
+        if vertex_timeout is not None:
+            updates["vertex_timeout"] = vertex_timeout
+        if vertex_max_tokens is not None:
+            updates["vertex_max_tokens"] = vertex_max_tokens
+        if vertex_temperature is not None:
+            updates["vertex_temperature"] = vertex_temperature
         return GistoryConfig.model_validate(config.model_dump() | updates)
     except (RuntimeError, ValidationError) as exc:
         raise typer.BadParameter(str(exc)) from exc
@@ -80,7 +110,7 @@ def generate(
     since: Optional[str] = typer.Option(None, "--since", help='Git date expression, e.g. "30 days ago".'),
     revision_range: Optional[str] = typer.Option(None, "--range", help='Git revision range, e.g. "HEAD~20..HEAD".'),
     out: Optional[str] = typer.Option(None, "--out", help="Output Markdown file."),
-    provider: Optional[str] = typer.Option(None, "--provider", help="Provider name: ollama, openai-compatible, bedrock, or mock."),
+    provider: Optional[str] = typer.Option(None, "--provider", help="Provider name: ollama, openai-compatible, bedrock, azure, vertex, or mock."),
     model: Optional[str] = typer.Option(None, "--model", help="Provider model name."),
     ollama_url: Optional[str] = typer.Option(None, "--ollama-url", help="Ollama base URL."),
     ollama_timeout: Optional[float] = typer.Option(None, "--ollama-timeout", help="Ollama request timeout in seconds."),
@@ -92,6 +122,16 @@ def generate(
     bedrock_timeout: Optional[float] = typer.Option(None, "--bedrock-timeout", help="Bedrock request timeout in seconds."),
     bedrock_max_tokens: Optional[int] = typer.Option(None, "--bedrock-max-tokens", help="Maximum Bedrock response tokens."),
     bedrock_temperature: Optional[float] = typer.Option(None, "--bedrock-temperature", help="Bedrock generation temperature."),
+    azure_endpoint: Optional[str] = typer.Option(None, "--azure-endpoint", help="Azure AI Foundry inference endpoint."),
+    azure_api_key_env: Optional[str] = typer.Option(None, "--azure-api-key-env", help="Optional Azure API key environment variable."),
+    azure_timeout: Optional[float] = typer.Option(None, "--azure-timeout", help="Azure request timeout in seconds."),
+    azure_max_tokens: Optional[int] = typer.Option(None, "--azure-max-tokens", help="Maximum Azure response tokens."),
+    azure_temperature: Optional[float] = typer.Option(None, "--azure-temperature", help="Azure generation temperature."),
+    vertex_project: Optional[str] = typer.Option(None, "--vertex-project", help="Google Cloud project for Vertex AI."),
+    vertex_location: Optional[str] = typer.Option(None, "--vertex-location", help="Google Cloud location for Vertex AI."),
+    vertex_timeout: Optional[float] = typer.Option(None, "--vertex-timeout", help="Vertex AI request timeout in seconds."),
+    vertex_max_tokens: Optional[int] = typer.Option(None, "--vertex-max-tokens", help="Maximum Vertex AI response tokens."),
+    vertex_temperature: Optional[float] = typer.Option(None, "--vertex-temperature", help="Vertex AI generation temperature."),
     config: Path = typer.Option(Path(".gistory.yml"), "--config", help="Path to config file."),
 ) -> None:
     """Generate a GISTORY.md file."""
@@ -110,6 +150,16 @@ def generate(
         bedrock_timeout=bedrock_timeout,
         bedrock_max_tokens=bedrock_max_tokens,
         bedrock_temperature=bedrock_temperature,
+        azure_endpoint=azure_endpoint,
+        azure_api_key_env=azure_api_key_env,
+        azure_timeout=azure_timeout,
+        azure_max_tokens=azure_max_tokens,
+        azure_temperature=azure_temperature,
+        vertex_project=vertex_project,
+        vertex_location=vertex_location,
+        vertex_timeout=vertex_timeout,
+        vertex_max_tokens=vertex_max_tokens,
+        vertex_temperature=vertex_temperature,
     )
     try:
         markdown = generate_history(selected, revision_range=revision_range, since=since)
@@ -122,7 +172,7 @@ def generate(
 @app.command()
 def explain(
     revision_range: str = typer.Option(..., "--range", help='Git revision range, e.g. "HEAD~10..HEAD".'),
-    provider: Optional[str] = typer.Option(None, "--provider", help="Provider name: ollama, openai-compatible, bedrock, or mock."),
+    provider: Optional[str] = typer.Option(None, "--provider", help="Provider name: ollama, openai-compatible, bedrock, azure, vertex, or mock."),
     model: Optional[str] = typer.Option(None, "--model", help="Provider model name."),
     ollama_url: Optional[str] = typer.Option(None, "--ollama-url", help="Ollama base URL."),
     ollama_timeout: Optional[float] = typer.Option(None, "--ollama-timeout", help="Ollama request timeout in seconds."),
@@ -134,6 +184,16 @@ def explain(
     bedrock_timeout: Optional[float] = typer.Option(None, "--bedrock-timeout", help="Bedrock request timeout in seconds."),
     bedrock_max_tokens: Optional[int] = typer.Option(None, "--bedrock-max-tokens", help="Maximum Bedrock response tokens."),
     bedrock_temperature: Optional[float] = typer.Option(None, "--bedrock-temperature", help="Bedrock generation temperature."),
+    azure_endpoint: Optional[str] = typer.Option(None, "--azure-endpoint", help="Azure AI Foundry inference endpoint."),
+    azure_api_key_env: Optional[str] = typer.Option(None, "--azure-api-key-env", help="Optional Azure API key environment variable."),
+    azure_timeout: Optional[float] = typer.Option(None, "--azure-timeout", help="Azure request timeout in seconds."),
+    azure_max_tokens: Optional[int] = typer.Option(None, "--azure-max-tokens", help="Maximum Azure response tokens."),
+    azure_temperature: Optional[float] = typer.Option(None, "--azure-temperature", help="Azure generation temperature."),
+    vertex_project: Optional[str] = typer.Option(None, "--vertex-project", help="Google Cloud project for Vertex AI."),
+    vertex_location: Optional[str] = typer.Option(None, "--vertex-location", help="Google Cloud location for Vertex AI."),
+    vertex_timeout: Optional[float] = typer.Option(None, "--vertex-timeout", help="Vertex AI request timeout in seconds."),
+    vertex_max_tokens: Optional[int] = typer.Option(None, "--vertex-max-tokens", help="Maximum Vertex AI response tokens."),
+    vertex_temperature: Optional[float] = typer.Option(None, "--vertex-temperature", help="Vertex AI generation temperature."),
     config: Path = typer.Option(Path(".gistory.yml"), "--config", help="Path to config file."),
 ) -> None:
     """Explain a commit range and print the narrative to stdout."""
@@ -151,6 +211,16 @@ def explain(
         bedrock_timeout=bedrock_timeout,
         bedrock_max_tokens=bedrock_max_tokens,
         bedrock_temperature=bedrock_temperature,
+        azure_endpoint=azure_endpoint,
+        azure_api_key_env=azure_api_key_env,
+        azure_timeout=azure_timeout,
+        azure_max_tokens=azure_max_tokens,
+        azure_temperature=azure_temperature,
+        vertex_project=vertex_project,
+        vertex_location=vertex_location,
+        vertex_timeout=vertex_timeout,
+        vertex_max_tokens=vertex_max_tokens,
+        vertex_temperature=vertex_temperature,
     )
     try:
         markdown = generate_history(selected, revision_range=revision_range)

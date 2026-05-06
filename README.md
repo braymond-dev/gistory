@@ -30,6 +30,8 @@ gistory generate --ollama-url http://localhost:11434
 gistory generate --ollama-timeout 300
 gistory generate --provider openai-compatible --model gpt-4.1-mini
 gistory generate --provider bedrock --model us.anthropic.claude-3-5-haiku-20241022-v1:0 --bedrock-region us-east-1
+gistory generate --provider azure --model my-deployment --azure-endpoint https://my-resource.services.ai.azure.com/models
+gistory generate --provider vertex --model gemini-2.5-flash --vertex-project my-gcp-project --vertex-location us-central1
 ```
 
 Explain a range without writing a file:
@@ -56,6 +58,16 @@ bedrock_profile: null
 bedrock_timeout: 120
 bedrock_max_tokens: 500
 bedrock_temperature: 0.2
+azure_endpoint: https://your-resource.services.ai.azure.com/models
+azure_api_key_env: null
+azure_timeout: 120
+azure_max_tokens: 500
+azure_temperature: 0.2
+vertex_project: null
+vertex_location: global
+vertex_timeout: 120
+vertex_max_tokens: 500
+vertex_temperature: 0.2
 group_by: month
 ignore:
   - package-lock.json
@@ -114,6 +126,38 @@ gistory generate \
 ```
 
 If your environment uses default AWS credentials, omit `--bedrock-profile`.
+
+For Azure AI Foundry, use Microsoft Entra ID by default:
+
+```bash
+az login
+gistory generate \
+  --provider azure \
+  --model my-deployment \
+  --azure-endpoint https://my-resource.services.ai.azure.com/models
+```
+
+If your Azure deployment uses an API key, name the environment variable:
+
+```bash
+export AZURE_INFERENCE_CREDENTIAL="..."
+gistory generate \
+  --provider azure \
+  --model my-deployment \
+  --azure-endpoint https://my-resource.services.ai.azure.com/models \
+  --azure-api-key-env AZURE_INFERENCE_CREDENTIAL
+```
+
+For Google Cloud Vertex AI, authenticate with application default credentials:
+
+```bash
+gcloud auth application-default login
+gistory generate \
+  --provider vertex \
+  --model gemini-2.5-flash \
+  --vertex-project my-gcp-project \
+  --vertex-location us-central1
+```
 
 ## Development
 

@@ -5,11 +5,13 @@ from pathlib import Path
 from gistory.config import GistoryConfig
 from gistory.git_reader import GitReader
 from gistory.markdown import CommitSummary, group_by_month, render_markdown
+from gistory.providers.azure import AzureProvider
 from gistory.providers.bedrock import BedrockProvider
 from gistory.providers.base import SummaryProvider
 from gistory.providers.mock import MockProvider
 from gistory.providers.openai_compatible import OpenAICompatibleProvider
 from gistory.providers.ollama import OllamaProvider
+from gistory.providers.vertex import VertexProvider
 from gistory.summarizer import prepare_commit_for_summary, summarize_commit
 
 
@@ -37,6 +39,24 @@ def build_provider(config: GistoryConfig) -> SummaryProvider:
             timeout=config.bedrock_timeout,
             max_tokens=config.bedrock_max_tokens,
             temperature=config.bedrock_temperature,
+        )
+    if config.provider == "azure":
+        return AzureProvider(
+            model=config.model,
+            endpoint=config.azure_endpoint,
+            api_key_env=config.azure_api_key_env,
+            timeout=config.azure_timeout,
+            max_tokens=config.azure_max_tokens,
+            temperature=config.azure_temperature,
+        )
+    if config.provider == "vertex":
+        return VertexProvider(
+            model=config.model,
+            project=config.vertex_project,
+            location=config.vertex_location,
+            timeout=config.vertex_timeout,
+            max_tokens=config.vertex_max_tokens,
+            temperature=config.vertex_temperature,
         )
     raise RuntimeError(f"Unsupported provider: {config.provider}")
 

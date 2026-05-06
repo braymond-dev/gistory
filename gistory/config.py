@@ -20,7 +20,7 @@ DEFAULT_IGNORE = [
 
 class GistoryConfig(BaseModel):
     output: str = "GISTORY.md"
-    provider: Literal["ollama", "openai-compatible", "bedrock", "mock"] = "ollama"
+    provider: Literal["ollama", "openai-compatible", "bedrock", "azure", "vertex", "mock"] = "ollama"
     model: str = "qwen3:8b"
     ollama_url: str = "http://localhost:11434"
     ollama_timeout: float = 300.0
@@ -32,6 +32,16 @@ class GistoryConfig(BaseModel):
     bedrock_timeout: float = 120.0
     bedrock_max_tokens: int = 500
     bedrock_temperature: float = 0.2
+    azure_endpoint: str = "https://your-resource.services.ai.azure.com/models"
+    azure_api_key_env: str | None = None
+    azure_timeout: float = 120.0
+    azure_max_tokens: int = 500
+    azure_temperature: float = 0.2
+    vertex_project: str | None = None
+    vertex_location: str = "global"
+    vertex_timeout: float = 120.0
+    vertex_max_tokens: int = 500
+    vertex_temperature: float = 0.2
     group_by: Literal["month"] = "month"
     ignore: list[str] = Field(default_factory=lambda: DEFAULT_IGNORE.copy())
 
