@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from gistory.git_reader import CommitInfo
-from gistory.markdown import CommitSummary, group_by_month, render_markdown
+from gistory.markdown import CommitSummary, append_segment, group_by_month, latest_segment_end, render_markdown, render_segment
 
 
 def make_commit(commit_hash: str, date: str, subject: str) -> CommitInfo:
@@ -35,3 +35,36 @@ def test_render_markdown_groups_by_month_with_key_commits() -> None:
 
 def test_render_markdown_empty_history() -> None:
     assert render_markdown([]) == "# Gistory\n\nNo commits found.\n"
+
+
+def test_render_segment_adds_commit_markers() -> None:
+    summaries = [
+        CommitSummary(make_commit("def567890", "2026-05-02T10:00:00", "Refactor scoring"), "Refactored scoring."),
+        CommitSummary(make_commit("abc123456", "2026-05-01T10:00:00", "Add CSV ingestion pipeline"), "Added CSV ingestion."),
+    ]
+
+    segment = render_segment(group_by_month(summaries))
+
+    assert segment.startswith("<!-- gistory:segment start=abc1234 end=def5678 -->")
+    assert segment.rstrip().endswith("<!-- gistory:segment-end -->")
+    assert "# Gistory" not in segment
+
+
+def test_latest_segment_end_reads_last_marker() -> None:
+    markdown = """# Gistory
+
+<!-- gistory:segment start=aaa1111 end=bbb2222 -->
+<!-- gistory:segment-end -->
+
+<!-- gistory:segment start=ccc3333 end=ddd4444 -->
+<!-- gistory:segment-end -->
+"""
+
+    assert latest_segment_end(markdown) == "ddd4444"
+
+
+def test_append_segment_preserves_existing_markdown() -> None:
+    existing = "# Gistory\n\nOld text."
+    segment = "<!-- gistory:segment start=aaa1111 end=bbb2222 -->\n\nNew text.\n\n<!-- gistory:segment-end -->\n"
+
+    assert append_segment(existing, segment) == f"{existing}\n\n{segment}"

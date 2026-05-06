@@ -7,7 +7,7 @@ import typer
 from pydantic import ValidationError
 
 from gistory.config import GistoryConfig, load_config, write_default_config
-from gistory.pipeline import generate_history, write_history
+from gistory.pipeline import generate_history, generate_history_append_only, write_history
 
 app = typer.Typer(help="Generate a narrative Markdown history from Git commits.")
 
@@ -15,6 +15,7 @@ app = typer.Typer(help="Generate a narrative Markdown history from Git commits."
 def _config_with_overrides(
     config_path: Path,
     output: Optional[str] = None,
+    append_only: Optional[bool] = None,
     provider: Optional[str] = None,
     model: Optional[str] = None,
     ollama_url: Optional[str] = None,
@@ -40,9 +41,11 @@ def _config_with_overrides(
 ) -> GistoryConfig:
     try:
         config = load_config(config_path)
-        updates: dict[str, str] = {}
+        updates: dict[str, object] = {}
         if output:
             updates["output"] = output
+        if append_only is not None:
+            updates["append_only"] = append_only
         if provider:
             updates["provider"] = provider
         if model:
@@ -110,6 +113,7 @@ def generate(
     since: Optional[str] = typer.Option(None, "--since", help='Git date expression, e.g. "30 days ago".'),
     revision_range: Optional[str] = typer.Option(None, "--range", help='Git revision range, e.g. "HEAD~20..HEAD".'),
     out: Optional[str] = typer.Option(None, "--out", help="Output Markdown file."),
+    append: Optional[bool] = typer.Option(None, "--append/--no-append", help="Append only new commits using GISTORY.md segment markers."),
     provider: Optional[str] = typer.Option(None, "--provider", help="Provider name: ollama, openai-compatible, bedrock, azure, vertex, or mock."),
     model: Optional[str] = typer.Option(None, "--model", help="Provider model name."),
     ollama_url: Optional[str] = typer.Option(None, "--ollama-url", help="Ollama base URL."),
@@ -138,6 +142,7 @@ def generate(
     selected = _config_with_overrides(
         config,
         output=out,
+        append_only=append,
         provider=provider,
         model=model,
         ollama_url=ollama_url,
@@ -162,7 +167,10 @@ def generate(
         vertex_temperature=vertex_temperature,
     )
     try:
-        markdown = generate_history(selected, revision_range=revision_range, since=since)
+        if selected.append_only:
+            markdown = generate_history_append_only(selected, revision_range=revision_range, since=since)
+        else:
+            markdown = generate_history(selected, revision_range=revision_range, since=since)
         write_history(markdown, selected.output)
     except (RuntimeError, ValueError) as exc:
         raise typer.BadParameter(str(exc)) from exc

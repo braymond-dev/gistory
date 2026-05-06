@@ -20,6 +20,7 @@ DEFAULT_IGNORE = [
 
 class GistoryConfig(BaseModel):
     output: str = "GISTORY.md"
+    append_only: bool = False
     provider: Literal["ollama", "openai-compatible", "bedrock", "azure", "vertex", "mock"] = "ollama"
     model: str = "qwen3:8b"
     ollama_url: str = "http://localhost:11434"

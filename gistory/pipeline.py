@@ -4,7 +4,7 @@ from pathlib import Path
 
 from gistory.config import GistoryConfig
 from gistory.git_reader import GitReader
-from gistory.markdown import CommitSummary, group_by_month, render_markdown
+from gistory.markdown import CommitSummary, append_segment, group_by_month, latest_segment_end, render_markdown, render_segment
 from gistory.providers.azure import AzureProvider
 from gistory.providers.bedrock import BedrockProvider
 from gistory.providers.base import SummaryProvider
@@ -71,6 +71,51 @@ def generate_history(
     if revision_range and since:
         raise ValueError("Use either --range or --since, not both")
 
+    sections = group_by_month(
+        _summarize_commits(
+            config,
+            repo_path=repo_path,
+            revision_range=revision_range,
+            since=since,
+            provider=provider,
+        )
+    )
+    return render_markdown(sections)
+
+
+def generate_history_append_only(
+    config: GistoryConfig,
+    repo_path: Path | str = ".",
+    revision_range: str | None = None,
+    since: str | None = None,
+    provider: SummaryProvider | None = None,
+) -> str:
+    if revision_range or since:
+        raise ValueError("Append-only mode manages the range from the existing output file")
+
+    output_path = Path(repo_path) / config.output
+    existing = output_path.read_text(encoding="utf-8") if output_path.exists() else ""
+    latest_hash = latest_segment_end(existing)
+    incremental_range = f"{latest_hash}..HEAD" if latest_hash else None
+    summaries = _summarize_commits(
+        config,
+        repo_path=repo_path,
+        revision_range=incremental_range,
+        provider=provider,
+    )
+    segment = render_segment(group_by_month(summaries))
+    if not segment:
+        return existing if existing else "# Gistory\n\nNo commits found.\n"
+    return append_segment(existing, segment)
+
+
+def _summarize_commits(
+    config: GistoryConfig,
+    repo_path: Path | str,
+    revision_range: str | None,
+    since: str | None = None,
+    provider: SummaryProvider | None = None,
+) -> list[CommitSummary]:
     reader = GitReader(repo_path)
     selected_provider = provider or build_provider(config)
     commit_summaries: list[CommitSummary] = []
@@ -80,9 +125,7 @@ def generate_history(
             continue
         summary = summarize_commit(prepared, selected_provider)
         commit_summaries.append(CommitSummary(commit=prepared, summary=summary))
-
-    sections = group_by_month(commit_summaries)
-    return render_markdown(sections)
+    return commit_summaries
 
 
 def write_history(markdown: str, output_path: Path | str) -> None:

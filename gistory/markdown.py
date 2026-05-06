@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from gistory.git_reader import CommitInfo
@@ -16,6 +17,10 @@ class HistorySection:
     title: str
     narrative: str
     commits: list[CommitSummary]
+
+
+SEGMENT_START_RE = re.compile(r"<!--\s*gistory:segment\s+start=(?P<start>[0-9a-fA-F]+)\s+end=(?P<end>[0-9a-fA-F]+)\s*-->")
+SEGMENT_END = "<!-- gistory:segment-end -->"
 
 
 def group_by_month(summaries: list[CommitSummary]) -> list[HistorySection]:
@@ -53,3 +58,29 @@ def render_markdown(sections: list[HistorySection]) -> str:
             lines.append(f"- {item.commit.short_hash} {item.commit.subject}")
         lines.append("")
     return "\n".join(lines)
+
+
+def render_segment(sections: list[HistorySection]) -> str:
+    commits = [item.commit for section in sections for item in section.commits]
+    if not commits:
+        return ""
+    oldest = commits[-1].short_hash
+    newest = commits[0].short_hash
+    body = render_markdown(sections).removeprefix("# Gistory\n\n").rstrip()
+    return f"<!-- gistory:segment start={oldest} end={newest} -->\n\n{body}\n\n{SEGMENT_END}\n"
+
+
+def append_segment(existing_markdown: str, segment: str) -> str:
+    if not segment.strip():
+        return existing_markdown
+    base = existing_markdown.strip()
+    if not base:
+        return f"# Gistory\n\n{segment}"
+    return f"{base}\n\n{segment}"
+
+
+def latest_segment_end(markdown: str) -> str | None:
+    matches = list(SEGMENT_START_RE.finditer(markdown))
+    if not matches:
+        return None
+    return matches[-1].group("end")

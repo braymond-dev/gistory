@@ -25,6 +25,7 @@ gistory generate
 gistory generate --since "30 days ago"
 gistory generate --range "HEAD~20..HEAD"
 gistory generate --out GISTORY.md
+gistory generate --append
 gistory generate --provider ollama --model qwen3:8b
 gistory generate --ollama-url http://localhost:11434
 gistory generate --ollama-timeout 300
@@ -46,6 +47,7 @@ gistory explain --range "HEAD~10..HEAD"
 
 ```yaml
 output: GISTORY.md
+append_only: false
 provider: ollama
 model: qwen3:8b
 ollama_url: http://localhost:11434
@@ -80,6 +82,23 @@ ignore:
 ```
 
 ## Providers
+
+Append-only mode preserves the existing `GISTORY.md` and adds a new hidden
+marker-delimited segment for commits after the last generated segment:
+
+```bash
+gistory generate --append
+```
+
+The markers use commit hashes:
+
+```markdown
+<!-- gistory:segment start=9f78fcf end=5cffba2 -->
+...
+<!-- gistory:segment-end -->
+```
+
+Append-only mode cannot be combined with `--range` or `--since`.
 
 The default provider is `ollama`, which sends commit summaries to the local
 Ollama API at `http://localhost:11434/api/generate`.
