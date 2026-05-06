@@ -5,8 +5,10 @@ from gistory.git_reader import CommitInfo
 
 def build_commit_prompt(commit: CommitInfo, diff_text: str) -> str:
     return (
-        "Summarize this Git commit for a project history narrative. "
-        "Be concise, factual, and mention user-visible or architectural impact when clear.\n\n"
+        "Summarize this Git commit as one short paragraph for a technical blog-style project history. "
+        "Write in a clear, narrative voice for engineers: factual, concrete, and readable. "
+        "Mention user-visible, architectural, testing, or developer-experience impact when clear. "
+        "Avoid bullet points, hype, markdown headings, and commit-hash repetition.\n\n"
         f"Commit: {commit.short_hash} {commit.subject}\n"
         f"Author: {commit.author}\n"
         f"Date: {commit.date.isoformat()}\n"

@@ -31,7 +31,7 @@ def group_by_month(summaries: list[CommitSummary]) -> list[HistorySection]:
 
     sections: list[HistorySection] = []
     for key in sorted(groups.keys(), reverse=True):
-        commits = groups[key]
+        commits = sorted(groups[key], key=lambda summary: summary.commit.date)
         narrative = build_narrative(commits)
         sections.append(HistorySection(title=key, narrative=narrative, commits=commits))
     return sections
@@ -40,10 +40,19 @@ def group_by_month(summaries: list[CommitSummary]) -> list[HistorySection]:
 def build_narrative(commits: list[CommitSummary]) -> str:
     if not commits:
         return "No notable changes."
-    sentences = [summary.summary.strip().rstrip(".") for summary in commits if summary.summary.strip()]
-    if not sentences:
+    paragraphs = [normalize_paragraph(summary.summary) for summary in commits if summary.summary.strip()]
+    if not paragraphs:
         return "This period included project maintenance and code changes."
-    return " ".join(f"{sentence}." for sentence in sentences)
+    return "\n\n".join(paragraphs)
+
+
+def normalize_paragraph(text: str) -> str:
+    paragraph = " ".join(text.strip().split())
+    if not paragraph:
+        return paragraph
+    if paragraph[-1] not in ".!?":
+        return f"{paragraph}."
+    return paragraph
 
 
 def render_markdown(sections: list[HistorySection]) -> str:
@@ -64,8 +73,8 @@ def render_segment(sections: list[HistorySection]) -> str:
     commits = [item.commit for section in sections for item in section.commits]
     if not commits:
         return ""
-    oldest = commits[-1].short_hash
-    newest = commits[0].short_hash
+    oldest = min(commits, key=lambda commit: commit.date).short_hash
+    newest = max(commits, key=lambda commit: commit.date).short_hash
     body = render_markdown(sections).removeprefix("# Gistory\n\n").rstrip()
     return f"<!-- gistory:segment start={oldest} end={newest} -->\n\n{body}\n\n{SEGMENT_END}\n"
 
