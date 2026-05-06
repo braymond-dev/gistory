@@ -2,7 +2,8 @@ import subprocess
 from pathlib import Path
 
 from gistory.config import GistoryConfig
-from gistory.pipeline import generate_history
+from gistory.pipeline import build_provider, generate_history
+from gistory.providers.ollama import OllamaProvider
 
 
 def git(repo: Path, *args: str) -> None:
@@ -42,3 +43,18 @@ def test_generate_history_rejects_range_and_since_together(tmp_path: Path) -> No
         assert "either --range or --since" in str(exc)
     else:
         raise AssertionError("Expected ValueError")
+
+
+def test_build_provider_passes_configured_ollama_url() -> None:
+    config = GistoryConfig(
+        provider="ollama",
+        model="qwen3:8b",
+        ollama_url="http://127.0.0.1:11434",
+        ollama_timeout=123.0,
+    )
+
+    provider = build_provider(config)
+
+    assert isinstance(provider, OllamaProvider)
+    assert provider.base_url == "http://127.0.0.1:11434"
+    assert provider.timeout == 123.0

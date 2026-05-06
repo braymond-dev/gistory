@@ -22,6 +22,8 @@ class GistoryConfig(BaseModel):
     output: str = "GISTORY.md"
     provider: Literal["ollama", "mock"] = "ollama"
     model: str = "qwen3:8b"
+    ollama_url: str = "http://localhost:11434"
+    ollama_timeout: float = 300.0
     group_by: Literal["month"] = "month"
     ignore: list[str] = Field(default_factory=lambda: DEFAULT_IGNORE.copy())
 

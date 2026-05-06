@@ -15,7 +15,11 @@ def build_provider(config: GistoryConfig) -> SummaryProvider:
     if config.provider == "mock":
         return MockProvider()
     if config.provider == "ollama":
-        return OllamaProvider(model=config.model)
+        return OllamaProvider(
+            model=config.model,
+            base_url=config.ollama_url,
+            timeout=config.ollama_timeout,
+        )
     raise RuntimeError(f"Unsupported provider: {config.provider}")
 
 
