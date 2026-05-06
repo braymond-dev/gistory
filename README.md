@@ -28,6 +28,7 @@ gistory generate --out GISTORY.md
 gistory generate --provider ollama --model qwen3:8b
 gistory generate --ollama-url http://localhost:11434
 gistory generate --ollama-timeout 300
+gistory generate --provider openai-compatible --model gpt-4.1-mini
 ```
 
 Explain a range without writing a file:
@@ -46,6 +47,9 @@ provider: ollama
 model: qwen3:8b
 ollama_url: http://localhost:11434
 ollama_timeout: 300
+api_base: https://api.openai.com/v1
+api_key_env: OPENAI_API_KEY
+api_timeout: 120
 group_by: month
 ignore:
   - package-lock.json
@@ -79,6 +83,17 @@ For tests and offline runs, use the deterministic mock provider:
 ```bash
 gistory generate --provider mock
 ```
+
+For remote hosted models, use the OpenAI-compatible provider. Set your API key
+in the environment variable named by `api_key_env`:
+
+```bash
+export OPENAI_API_KEY="..."
+gistory generate --provider openai-compatible --model gpt-4.1-mini
+```
+
+Any service that supports the OpenAI chat completions shape can be used by
+changing `api_base`, `api_key_env`, and `model`.
 
 ## Development
 

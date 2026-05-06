@@ -3,6 +3,7 @@ from pathlib import Path
 
 from gistory.config import GistoryConfig
 from gistory.pipeline import build_provider, generate_history
+from gistory.providers.openai_compatible import OpenAICompatibleProvider
 from gistory.providers.ollama import OllamaProvider
 
 
@@ -58,3 +59,21 @@ def test_build_provider_passes_configured_ollama_url() -> None:
     assert isinstance(provider, OllamaProvider)
     assert provider.base_url == "http://127.0.0.1:11434"
     assert provider.timeout == 123.0
+
+
+def test_build_provider_supports_openai_compatible_provider() -> None:
+    config = GistoryConfig(
+        provider="openai-compatible",
+        model="gpt-4.1-mini",
+        api_base="https://example.test/v1",
+        api_key_env="EXAMPLE_API_KEY",
+        api_timeout=42.0,
+    )
+
+    provider = build_provider(config)
+
+    assert isinstance(provider, OpenAICompatibleProvider)
+    assert provider.model == "gpt-4.1-mini"
+    assert provider.api_base == "https://example.test/v1"
+    assert provider.api_key_env == "EXAMPLE_API_KEY"
+    assert provider.timeout == 42.0

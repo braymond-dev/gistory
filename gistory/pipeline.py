@@ -7,6 +7,7 @@ from gistory.git_reader import GitReader
 from gistory.markdown import CommitSummary, group_by_month, render_markdown
 from gistory.providers.base import SummaryProvider
 from gistory.providers.mock import MockProvider
+from gistory.providers.openai_compatible import OpenAICompatibleProvider
 from gistory.providers.ollama import OllamaProvider
 from gistory.summarizer import prepare_commit_for_summary, summarize_commit
 
@@ -19,6 +20,13 @@ def build_provider(config: GistoryConfig) -> SummaryProvider:
             model=config.model,
             base_url=config.ollama_url,
             timeout=config.ollama_timeout,
+        )
+    if config.provider == "openai-compatible":
+        return OpenAICompatibleProvider(
+            model=config.model,
+            api_base=str(config.api_base),
+            api_key_env=config.api_key_env,
+            timeout=config.api_timeout,
         )
     raise RuntimeError(f"Unsupported provider: {config.provider}")
 

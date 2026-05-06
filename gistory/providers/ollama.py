@@ -4,6 +4,7 @@ import httpx
 
 from gistory.git_reader import CommitInfo
 from gistory.providers.base import SummaryProvider
+from gistory.providers.prompts import build_commit_prompt
 
 
 class OllamaProvider(SummaryProvider):
@@ -18,21 +19,10 @@ class OllamaProvider(SummaryProvider):
         self.timeout = timeout
 
     def summarize_commit(self, commit: CommitInfo, diff_text: str) -> str:
-        prompt = (
-            "Summarize this Git commit for a project history narrative. "
-            "Be concise, factual, and mention user-visible or architectural impact when clear.\n\n"
-            f"Commit: {commit.short_hash} {commit.subject}\n"
-            f"Author: {commit.author}\n"
-            f"Date: {commit.date.isoformat()}\n"
-            f"Body:\n{commit.body or '(none)'}\n\n"
-            f"Files changed:\n{chr(10).join(commit.files_changed) or '(none)'}\n\n"
-            f"Diff summary:\n{commit.diff_summary or '(none)'}\n\n"
-            f"Diff:\n{diff_text or '(none)'}"
-        )
         try:
             response = httpx.post(
                 f"{self.base_url}/api/generate",
-                json={"model": self.model, "prompt": prompt, "stream": False},
+                json={"model": self.model, "prompt": build_commit_prompt(commit, diff_text), "stream": False},
                 timeout=self.timeout,
             )
             response.raise_for_status()

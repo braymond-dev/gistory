@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import AnyHttpUrl, BaseModel, Field
 
 
 DEFAULT_IGNORE = [
@@ -20,10 +20,13 @@ DEFAULT_IGNORE = [
 
 class GistoryConfig(BaseModel):
     output: str = "GISTORY.md"
-    provider: Literal["ollama", "mock"] = "ollama"
+    provider: Literal["ollama", "openai-compatible", "mock"] = "ollama"
     model: str = "qwen3:8b"
     ollama_url: str = "http://localhost:11434"
     ollama_timeout: float = 300.0
+    api_base: AnyHttpUrl = AnyHttpUrl("https://api.openai.com/v1")
+    api_key_env: str = "OPENAI_API_KEY"
+    api_timeout: float = 120.0
     group_by: Literal["month"] = "month"
     ignore: list[str] = Field(default_factory=lambda: DEFAULT_IGNORE.copy())
 
