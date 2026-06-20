@@ -36,3 +36,20 @@ def test_format_duration() -> None:
     assert format_duration(1.2) == "1 sec"
     assert format_duration(65.0) == "1 min 5 secs"
     assert format_duration(245.0) == "4 mins 5 secs"
+
+
+def test_init_writes_only_selected_provider_settings(tmp_path: Path) -> None:
+    config_path = tmp_path / ".gistory.yml"
+
+    result = runner.invoke(
+        app,
+        ["init", "--config", str(config_path), "--provider", "vertex", "--model", "gemini-test"],
+    )
+
+    assert result.exit_code == 0
+    text = config_path.read_text(encoding="utf-8")
+    assert "provider: vertex" in text
+    assert "model: gemini-test" in text
+    assert "vertex_location" in text
+    assert "openai_api_base" not in text
+    assert "bedrock_region" not in text

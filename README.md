@@ -44,32 +44,20 @@ gistory explain --range "HEAD~10..HEAD"
 
 ## Configuration
 
-`gistory init` creates `.gistory.yml`:
+`gistory init` creates a minimal Ollama config. Select another provider to emit
+only its relevant settings:
+
+```bash
+gistory init --provider openai-compatible --model gpt-4.1-mini
+```
 
 ```yaml
 output: GISTORY.md
-provider: ollama
-model: qwen3:8b
-ollama_url: http://localhost:11434
-ollama_timeout: 300
-api_base: https://api.openai.com/v1
-api_key_env: OPENAI_API_KEY
-api_timeout: 120
-bedrock_region: us-east-1
-bedrock_profile: null
-bedrock_timeout: 120
-bedrock_max_tokens: 500
-bedrock_temperature: 0.2
-azure_endpoint: https://your-resource.services.ai.azure.com/models
-azure_api_key_env: null
-azure_timeout: 120
-azure_max_tokens: 500
-azure_temperature: 0.2
-vertex_project: null
-vertex_location: global
-vertex_timeout: 120
-vertex_max_tokens: 500
-vertex_temperature: 0.2
+provider: openai-compatible
+model: gpt-4.1-mini
+openai_api_base: https://api.openai.com/v1
+openai_api_key_env: OPENAI_API_KEY
+openai_timeout: 120
 group_by: month
 ignore:
   - package-lock.json
@@ -80,6 +68,9 @@ ignore:
   - node_modules/**
   - .next/**
 ```
+
+Only the selected provider's fields are required. Other provider settings are
+optional defaults inside Gistory and do not need to appear in the YAML.
 
 ## Providers
 
@@ -130,7 +121,7 @@ gistory generate --provider mock
 ```
 
 For remote hosted models, use the OpenAI-compatible provider. Set your API key
-in the environment variable named by `api_key_env`:
+in the environment variable named by `openai_api_key_env`:
 
 ```bash
 export OPENAI_API_KEY="..."
@@ -138,7 +129,7 @@ gistory generate --provider openai-compatible --model gpt-4.1-mini
 ```
 
 Any service that supports the OpenAI chat completions shape can be used by
-changing `api_base`, `api_key_env`, and `model`.
+changing `openai_api_base`, `openai_api_key_env`, and `model`.
 
 For AWS Bedrock, authenticate with normal AWS credentials or SSO, then use the
 Bedrock provider:

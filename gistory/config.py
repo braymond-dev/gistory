@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import AnyHttpUrl, BaseModel, Field
+from pydantic import AliasChoices, AnyHttpUrl, BaseModel, Field
 
 
 DEFAULT_IGNORE = [
@@ -17,6 +17,43 @@ DEFAULT_IGNORE = [
     ".next/**",
 ]
 
+PROVIDERS = ("ollama", "openai-compatible", "bedrock", "azure", "vertex", "mock")
+PROVIDER_DEFAULT_MODELS = {
+    "ollama": "qwen3:8b",
+    "openai-compatible": "gpt-4.1-mini",
+    "bedrock": "us.anthropic.claude-3-5-haiku-20241022-v1:0",
+    "azure": "your-deployment-name",
+    "vertex": "gemini-2.5-flash",
+    "mock": "mock",
+}
+COMMON_CONFIG_FIELDS = {"output", "provider", "model", "group_by", "ignore"}
+PROVIDER_CONFIG_FIELDS = {
+    "ollama": {"ollama_url", "ollama_timeout"},
+    "openai-compatible": {"openai_api_base", "openai_api_key_env", "openai_timeout"},
+    "bedrock": {
+        "bedrock_region",
+        "bedrock_profile",
+        "bedrock_timeout",
+        "bedrock_max_tokens",
+        "bedrock_temperature",
+    },
+    "azure": {
+        "azure_endpoint",
+        "azure_api_key_env",
+        "azure_timeout",
+        "azure_max_tokens",
+        "azure_temperature",
+    },
+    "vertex": {
+        "vertex_project",
+        "vertex_location",
+        "vertex_timeout",
+        "vertex_max_tokens",
+        "vertex_temperature",
+    },
+    "mock": set(),
+}
+
 
 class GistoryConfig(BaseModel):
     output: str = "GISTORY.md"
@@ -24,9 +61,18 @@ class GistoryConfig(BaseModel):
     model: str = "qwen3:8b"
     ollama_url: str = "http://localhost:11434"
     ollama_timeout: float = 300.0
-    api_base: AnyHttpUrl = AnyHttpUrl("https://api.openai.com/v1")
-    api_key_env: str = "OPENAI_API_KEY"
-    api_timeout: float = 120.0
+    openai_api_base: AnyHttpUrl = Field(
+        default=AnyHttpUrl("https://api.openai.com/v1"),
+        validation_alias=AliasChoices("openai_api_base", "api_base"),
+    )
+    openai_api_key_env: str = Field(
+        default="OPENAI_API_KEY",
+        validation_alias=AliasChoices("openai_api_key_env", "api_key_env"),
+    )
+    openai_timeout: float = Field(
+        default=120.0,
+        validation_alias=AliasChoices("openai_timeout", "api_timeout"),
+    )
     bedrock_region: str = "us-east-1"
     bedrock_profile: str | None = None
     bedrock_timeout: float = 120.0
@@ -64,9 +110,17 @@ def load_config(path: Path = Path(".gistory.yml")) -> GistoryConfig:
     return GistoryConfig.model_validate(raw)
 
 
-def write_default_config(path: Path = Path(".gistory.yml"), overwrite: bool = False) -> None:
+def write_default_config(
+    path: Path = Path(".gistory.yml"),
+    overwrite: bool = False,
+    provider: str = "ollama",
+    model: str | None = None,
+) -> None:
     if path.exists() and not overwrite:
         raise FileExistsError(f"{path} already exists")
-    config = default_config()
-    data = config.model_dump(mode="json")
+    if provider not in PROVIDERS:
+        raise ValueError(f"Unsupported provider: {provider}")
+    config = GistoryConfig(provider=provider, model=model or PROVIDER_DEFAULT_MODELS[provider])
+    fields = COMMON_CONFIG_FIELDS | PROVIDER_CONFIG_FIELDS[provider]
+    data = config.model_dump(mode="json", include=fields)
     path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")

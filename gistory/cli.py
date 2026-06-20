@@ -30,9 +30,9 @@ def _config_with_overrides(
     model: Optional[str] = None,
     ollama_url: Optional[str] = None,
     ollama_timeout: Optional[float] = None,
-    api_base: Optional[str] = None,
-    api_key_env: Optional[str] = None,
-    api_timeout: Optional[float] = None,
+    openai_api_base: Optional[str] = None,
+    openai_api_key_env: Optional[str] = None,
+    openai_timeout: Optional[float] = None,
     bedrock_region: Optional[str] = None,
     bedrock_profile: Optional[str] = None,
     bedrock_timeout: Optional[float] = None,
@@ -62,12 +62,12 @@ def _config_with_overrides(
             updates["ollama_url"] = ollama_url
         if ollama_timeout is not None:
             updates["ollama_timeout"] = ollama_timeout
-        if api_base:
-            updates["api_base"] = api_base
-        if api_key_env:
-            updates["api_key_env"] = api_key_env
-        if api_timeout is not None:
-            updates["api_timeout"] = api_timeout
+        if openai_api_base:
+            updates["openai_api_base"] = openai_api_base
+        if openai_api_key_env:
+            updates["openai_api_key_env"] = openai_api_key_env
+        if openai_timeout is not None:
+            updates["openai_timeout"] = openai_timeout
         if bedrock_region:
             updates["bedrock_region"] = bedrock_region
         if bedrock_profile:
@@ -107,11 +107,13 @@ def _config_with_overrides(
 def init(
     config: Path = typer.Option(Path(".gistory.yml"), "--config", help="Path to write config."),
     force: bool = typer.Option(False, "--force", help="Overwrite an existing config file."),
+    provider: str = typer.Option("ollama", "--provider", help="Provider to configure."),
+    model: Optional[str] = typer.Option(None, "--model", help="Override the provider's default model."),
 ) -> None:
     """Create a default .gistory.yml file."""
     try:
-        write_default_config(config, overwrite=force)
-    except FileExistsError as exc:
+        write_default_config(config, overwrite=force, provider=provider, model=model)
+    except (FileExistsError, ValueError) as exc:
         raise typer.BadParameter(str(exc)) from exc
     typer.echo(f"Created {config}")
 
@@ -127,9 +129,9 @@ def generate(
     model: Optional[str] = typer.Option(None, "--model", help="Provider model name."),
     ollama_url: Optional[str] = typer.Option(None, "--ollama-url", help="Ollama base URL."),
     ollama_timeout: Optional[float] = typer.Option(None, "--ollama-timeout", help="Ollama request timeout in seconds."),
-    api_base: Optional[str] = typer.Option(None, "--api-base", help="OpenAI-compatible API base URL."),
-    api_key_env: Optional[str] = typer.Option(None, "--api-key-env", help="Environment variable containing the API key."),
-    api_timeout: Optional[float] = typer.Option(None, "--api-timeout", help="Remote API request timeout in seconds."),
+    openai_api_base: Optional[str] = typer.Option(None, "--openai-api-base", help="OpenAI-compatible API base URL."),
+    openai_api_key_env: Optional[str] = typer.Option(None, "--openai-api-key-env", help="Environment variable containing the OpenAI API key."),
+    openai_timeout: Optional[float] = typer.Option(None, "--openai-timeout", help="OpenAI-compatible request timeout in seconds."),
     bedrock_region: Optional[str] = typer.Option(None, "--bedrock-region", help="AWS region for Bedrock Runtime."),
     bedrock_profile: Optional[str] = typer.Option(None, "--bedrock-profile", help="AWS profile name for Bedrock."),
     bedrock_timeout: Optional[float] = typer.Option(None, "--bedrock-timeout", help="Bedrock request timeout in seconds."),
@@ -155,9 +157,9 @@ def generate(
         model=model,
         ollama_url=ollama_url,
         ollama_timeout=ollama_timeout,
-        api_base=api_base,
-        api_key_env=api_key_env,
-        api_timeout=api_timeout,
+        openai_api_base=openai_api_base,
+        openai_api_key_env=openai_api_key_env,
+        openai_timeout=openai_timeout,
         bedrock_region=bedrock_region,
         bedrock_profile=bedrock_profile,
         bedrock_timeout=bedrock_timeout,
@@ -202,9 +204,9 @@ def explain(
     model: Optional[str] = typer.Option(None, "--model", help="Provider model name."),
     ollama_url: Optional[str] = typer.Option(None, "--ollama-url", help="Ollama base URL."),
     ollama_timeout: Optional[float] = typer.Option(None, "--ollama-timeout", help="Ollama request timeout in seconds."),
-    api_base: Optional[str] = typer.Option(None, "--api-base", help="OpenAI-compatible API base URL."),
-    api_key_env: Optional[str] = typer.Option(None, "--api-key-env", help="Environment variable containing the API key."),
-    api_timeout: Optional[float] = typer.Option(None, "--api-timeout", help="Remote API request timeout in seconds."),
+    openai_api_base: Optional[str] = typer.Option(None, "--openai-api-base", help="OpenAI-compatible API base URL."),
+    openai_api_key_env: Optional[str] = typer.Option(None, "--openai-api-key-env", help="Environment variable containing the OpenAI API key."),
+    openai_timeout: Optional[float] = typer.Option(None, "--openai-timeout", help="OpenAI-compatible request timeout in seconds."),
     bedrock_region: Optional[str] = typer.Option(None, "--bedrock-region", help="AWS region for Bedrock Runtime."),
     bedrock_profile: Optional[str] = typer.Option(None, "--bedrock-profile", help="AWS profile name for Bedrock."),
     bedrock_timeout: Optional[float] = typer.Option(None, "--bedrock-timeout", help="Bedrock request timeout in seconds."),
@@ -229,9 +231,9 @@ def explain(
         model=model,
         ollama_url=ollama_url,
         ollama_timeout=ollama_timeout,
-        api_base=api_base,
-        api_key_env=api_key_env,
-        api_timeout=api_timeout,
+        openai_api_base=openai_api_base,
+        openai_api_key_env=openai_api_key_env,
+        openai_timeout=openai_timeout,
         bedrock_region=bedrock_region,
         bedrock_profile=bedrock_profile,
         bedrock_timeout=bedrock_timeout,

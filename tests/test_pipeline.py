@@ -193,9 +193,9 @@ def test_build_provider_supports_openai_compatible_provider() -> None:
     config = GistoryConfig(
         provider="openai-compatible",
         model="gpt-4.1-mini",
-        api_base="https://example.test/v1",
-        api_key_env="EXAMPLE_API_KEY",
-        api_timeout=42.0,
+        openai_api_base="https://example.test/v1",
+        openai_api_key_env="EXAMPLE_API_KEY",
+        openai_timeout=42.0,
     )
 
     provider = build_provider(config)

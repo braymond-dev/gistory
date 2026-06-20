@@ -35,9 +35,9 @@ def build_provider(config: GistoryConfig) -> SummaryProvider:
     if config.provider == "openai-compatible":
         return OpenAICompatibleProvider(
             model=config.model,
-            api_base=str(config.api_base),
-            api_key_env=config.api_key_env,
-            timeout=config.api_timeout,
+            api_base=str(config.openai_api_base),
+            api_key_env=config.openai_api_key_env,
+            timeout=config.openai_timeout,
         )
     if config.provider == "bedrock":
         return BedrockProvider(
