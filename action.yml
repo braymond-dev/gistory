@@ -17,6 +17,7 @@ inputs:
     description: Output path relative to the target repository.
     required: false
     default: GISTORY.md
+
 outputs:
   changed:
     description: Whether the generated output differs from the checked-out file.
@@ -24,6 +25,15 @@ outputs:
   output-path:
     description: Absolute path to the generated Markdown file.
     value: ${{ steps.result.outputs.output-path }}
+  diagnostic-log:
+    description: Runner-local path to the diagnostic log.
+    value: ${{ steps.diagnostics.outputs.log-file }}
+  diagnostic-artifact:
+    description: Name of the uploaded log artifact.
+    value: ${{ steps.diagnostics.outputs.artifact-name }}
+  log-artifact:
+    description: Name of the uploaded log artifact.
+    value: ${{ steps.diagnostics.outputs.artifact-name }}
 
 runs:
   using: composite
@@ -33,9 +43,42 @@ runs:
       with:
         python-version: "3.11"
 
+    - name: Prepare diagnostics
+      id: diagnostics
+      shell: bash
+      env:
+        GISTORY_PROVIDER: ${{ inputs.provider }}
+        GISTORY_MODEL: ${{ inputs.model }}
+        GISTORY_CONFIG: ${{ inputs.config }}
+        GISTORY_OUTPUT: ${{ inputs.output }}
+      run: |
+        log_dir="$RUNNER_TEMP/gistory"
+        log_file="$log_dir/gistory-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.log"
+        artifact_name="gistory-log-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+        mkdir -p "$log_dir"
+        {
+          echo "Gistory GitHub Action diagnostics"
+          echo "run_id=$GITHUB_RUN_ID"
+          echo "run_attempt=$GITHUB_RUN_ATTEMPT"
+          echo "repository=$GITHUB_REPOSITORY"
+          echo "sha=$GITHUB_SHA"
+          echo "provider=$GISTORY_PROVIDER"
+          echo "model=$GISTORY_MODEL"
+          echo "config=$GISTORY_CONFIG"
+          echo "output=$GISTORY_OUTPUT"
+          python --version
+          git -C "$GITHUB_WORKSPACE" rev-parse HEAD
+        } > "$log_file" 2>&1
+        echo "log-file=$log_file" >> "$GITHUB_OUTPUT"
+        echo "artifact-name=$artifact_name" >> "$GITHUB_OUTPUT"
+
     - name: Install Gistory
       shell: bash
-      run: python -m pip install "$GITHUB_ACTION_PATH"
+      env:
+        GISTORY_LOG_FILE: ${{ steps.diagnostics.outputs.log-file }}
+      run: |
+        set -o pipefail
+        python -m pip install "$GITHUB_ACTION_PATH" 2>&1 | tee -a "$GISTORY_LOG_FILE"
 
     - name: Generate Gistory
       shell: bash
@@ -44,7 +87,9 @@ runs:
         GISTORY_MODEL: ${{ inputs.model }}
         GISTORY_CONFIG: ${{ inputs.config }}
         GISTORY_OUTPUT: ${{ inputs.output }}
+        GISTORY_LOG_FILE: ${{ steps.diagnostics.outputs.log-file }}
       run: |
+        set -o pipefail
         args=(
           generate
           --repo "$GITHUB_WORKSPACE"
@@ -53,7 +98,34 @@ runs:
           --provider "$GISTORY_PROVIDER"
           --model "$GISTORY_MODEL"
         )
-        gistory "${args[@]}"
+        gistory "${args[@]}" 2>&1 | tee -a "$GISTORY_LOG_FILE"
+
+    - name: Summarize failure
+      if: ${{ failure() }}
+      shell: bash
+      env:
+        GISTORY_ARTIFACT_NAME: ${{ steps.diagnostics.outputs.artifact-name }}
+        GISTORY_PROVIDER: ${{ inputs.provider }}
+        GISTORY_MODEL: ${{ inputs.model }}
+      run: |
+        {
+          echo "## Gistory failed"
+          echo
+          echo "- Provider: \`$GISTORY_PROVIDER\`"
+          echo "- Model: \`$GISTORY_MODEL\`"
+          echo "- Diagnostic artifact: \`$GISTORY_ARTIFACT_NAME\`"
+          echo
+          echo "Download the artifact from this workflow run for the complete install and generation log."
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Upload Gistory log
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.diagnostics.outputs.artifact-name }}
+        path: ${{ steps.diagnostics.outputs.log-file }}
+        retention-days: 14
+        if-no-files-found: error
 
     - name: Report result
       id: result
@@ -69,6 +141,26 @@ runs:
         fi
         echo "changed=$changed" >> "$GITHUB_OUTPUT"
         echo "output-path=$output_path" >> "$GITHUB_OUTPUT"
+
+    - name: Summarize success
+      if: ${{ success() }}
+      shell: bash
+      env:
+        GISTORY_CHANGED: ${{ steps.result.outputs.changed }}
+        GISTORY_OUTPUT_PATH: ${{ steps.result.outputs.output-path }}
+        GISTORY_ARTIFACT_NAME: ${{ steps.diagnostics.outputs.artifact-name }}
+        GISTORY_PROVIDER: ${{ inputs.provider }}
+        GISTORY_MODEL: ${{ inputs.model }}
+      run: |
+        {
+          echo "## Gistory completed"
+          echo
+          echo "- Provider: \`$GISTORY_PROVIDER\`"
+          echo "- Model: \`$GISTORY_MODEL\`"
+          echo "- Output changed: \`$GISTORY_CHANGED\`"
+          echo "- Output path: \`$GISTORY_OUTPUT_PATH\`"
+          echo "- Log artifact: \`$GISTORY_ARTIFACT_NAME\`"
+        } >> "$GITHUB_STEP_SUMMARY"
 
 branding:
   icon: book-open

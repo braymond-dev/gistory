@@ -239,6 +239,13 @@ so `uses: braymond-dev/gistory@v1` resolves.
 For Bedrock, Azure, or Vertex, authenticate with the relevant official login
 action before the Gistory step and select the corresponding provider/model.
 
+Every run writes a job summary and uploads a `gistory-log-<run>-<attempt>`
+artifact retained for 14 days. Successful summaries report whether the output
+changed; failed summaries point to the same artifact for diagnosis. The log
+includes safe run metadata, Python and Git context, dependency install output,
+and Gistory stdout/stderr. Provider credentials and environment values are not
+written to the log.
+
 Screenshots referenced by `GISTORY.md` must also have durable locations. CI
 workspace files and ordinary build artifacts disappear or expire after the
 run, so images must either be committed alongside the history or uploaded to
