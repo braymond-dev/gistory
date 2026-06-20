@@ -4,7 +4,15 @@ from pathlib import Path
 
 from gistory.config import GistoryConfig
 from gistory.git_reader import GitReader
-from gistory.markdown import CommitSummary, append_segment, group_by_month, latest_segment_end, render_markdown, render_segment
+from gistory.markdown import (
+    CommitSummary,
+    append_segment,
+    group_by_month,
+    latest_segment_end,
+    mark_continued_months,
+    render_markdown,
+    render_segment,
+)
 from gistory.providers.azure import AzureProvider
 from gistory.providers.bedrock import BedrockProvider
 from gistory.providers.base import SummaryProvider
@@ -103,7 +111,12 @@ def generate_history_append_only(
         revision_range=incremental_range,
         provider=provider,
     )
-    segment = render_segment(group_by_month(summaries))
+    sections = mark_continued_months(group_by_month(summaries), existing)
+    segment = render_segment(
+        sections,
+        start_hash=summaries[-1].commit.short_hash if summaries else None,
+        end_hash=summaries[0].commit.short_hash if summaries else None,
+    )
     if not segment:
         return existing if existing else "# Gistory\n\nNo commits found.\n"
     return append_segment(existing, segment)

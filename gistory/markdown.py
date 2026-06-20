@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from gistory.git_reader import CommitInfo
 
@@ -21,6 +21,7 @@ class HistorySection:
 
 SEGMENT_START_RE = re.compile(r"<!--\s*gistory:segment\s+start=(?P<start>[0-9a-fA-F]+)\s+end=(?P<end>[0-9a-fA-F]+)\s*-->")
 SEGMENT_END = "<!-- gistory:segment-end -->"
+MONTH_HEADING_RE = re.compile(r"^## (?P<month>\d{4}-\d{2})(?: \(continued\))?$", re.MULTILINE)
 
 
 def group_by_month(summaries: list[CommitSummary]) -> list[HistorySection]:
@@ -30,7 +31,7 @@ def group_by_month(summaries: list[CommitSummary]) -> list[HistorySection]:
         groups.setdefault(key, []).append(summary)
 
     sections: list[HistorySection] = []
-    for key in sorted(groups.keys(), reverse=True):
+    for key in sorted(groups.keys()):
         commits = sorted(groups[key], key=lambda summary: summary.commit.date)
         narrative = build_narrative(commits)
         sections.append(HistorySection(title=key, narrative=narrative, commits=commits))
@@ -69,12 +70,24 @@ def render_markdown(sections: list[HistorySection]) -> str:
     return "\n".join(lines)
 
 
-def render_segment(sections: list[HistorySection]) -> str:
+def mark_continued_months(sections: list[HistorySection], existing_markdown: str) -> list[HistorySection]:
+    existing_months = {match.group("month") for match in MONTH_HEADING_RE.finditer(existing_markdown)}
+    return [
+        replace(section, title=f"{section.title} (continued)") if section.title in existing_months else section
+        for section in sections
+    ]
+
+
+def render_segment(
+    sections: list[HistorySection],
+    start_hash: str | None = None,
+    end_hash: str | None = None,
+) -> str:
     commits = [item.commit for section in sections for item in section.commits]
     if not commits:
         return ""
-    oldest = min(commits, key=lambda commit: commit.date).short_hash
-    newest = max(commits, key=lambda commit: commit.date).short_hash
+    oldest = start_hash or commits[0].short_hash
+    newest = end_hash or commits[-1].short_hash
     body = render_markdown(sections).removeprefix("# Gistory\n\n").rstrip()
     return f"<!-- gistory:segment start={oldest} end={newest} -->\n\n{body}\n\n{SEGMENT_END}\n"
 
