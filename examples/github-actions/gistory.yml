@@ -1,0 +1,39 @@
+name: Update Gistory
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - GISTORY.md
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  gistory:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate Gistory
+        id: gistory
+        uses: braymond-dev/gistory@v1
+        with:
+          provider: openai-compatible
+          model: gpt-4.1-mini
+          append: true
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Commit updated history
+        if: steps.gistory.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add GISTORY.md
+          git commit -m "docs: update Gistory"
+          git push

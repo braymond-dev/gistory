@@ -1,0 +1,88 @@
+name: Gistory
+description: Generate or incrementally update GISTORY.md from a repository's Git history.
+author: Benjamin Raymond
+
+inputs:
+  provider:
+    description: Provider name such as openai-compatible, bedrock, azure, vertex, ollama, or mock.
+    required: true
+  model:
+    description: Model or deployment name used by the selected provider.
+    required: true
+  config:
+    description: Config path relative to the target repository.
+    required: false
+    default: .gistory.yml
+  output:
+    description: Output path relative to the target repository.
+    required: false
+    default: GISTORY.md
+  append:
+    description: Only summarize commits after the last Gistory segment marker.
+    required: false
+    default: "true"
+
+outputs:
+  changed:
+    description: Whether the generated output differs from the checked-out file.
+    value: ${{ steps.result.outputs.changed }}
+  output-path:
+    description: Absolute path to the generated Markdown file.
+    value: ${{ steps.result.outputs.output-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install Gistory
+      shell: bash
+      run: python -m pip install "$GITHUB_ACTION_PATH"
+
+    - name: Generate Gistory
+      shell: bash
+      env:
+        GISTORY_PROVIDER: ${{ inputs.provider }}
+        GISTORY_MODEL: ${{ inputs.model }}
+        GISTORY_CONFIG: ${{ inputs.config }}
+        GISTORY_OUTPUT: ${{ inputs.output }}
+        GISTORY_APPEND: ${{ inputs.append }}
+      run: |
+        args=(
+          generate
+          --repo "$GITHUB_WORKSPACE"
+          --config "$GITHUB_WORKSPACE/$GISTORY_CONFIG"
+          --out "$GISTORY_OUTPUT"
+          --provider "$GISTORY_PROVIDER"
+          --model "$GISTORY_MODEL"
+        )
+
+        if [[ "$GISTORY_APPEND" == "true" ]]; then
+          args+=(--append)
+        else
+          args+=(--no-append)
+        fi
+
+        gistory "${args[@]}"
+
+    - name: Report result
+      id: result
+      shell: bash
+      env:
+        GISTORY_OUTPUT: ${{ inputs.output }}
+      run: |
+        output_path="$GITHUB_WORKSPACE/$GISTORY_OUTPUT"
+        if [[ -n "$(git -C "$GITHUB_WORKSPACE" status --porcelain -- "$GISTORY_OUTPUT")" ]]; then
+          changed=true
+        else
+          changed=false
+        fi
+        echo "changed=$changed" >> "$GITHUB_OUTPUT"
+        echo "output-path=$output_path" >> "$GITHUB_OUTPUT"
+
+branding:
+  icon: book-open
+  color: blue

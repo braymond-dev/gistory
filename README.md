@@ -184,3 +184,56 @@ gistory generate \
 ```bash
 pytest
 ```
+
+## GitHub Actions
+
+Gistory can run as a reusable action in another repository. The checkout must
+include full history, and provider credentials stay in the consuming
+repository's secrets or cloud authentication steps.
+
+```yaml
+name: Update Gistory
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: [GISTORY.md]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  gistory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: gistory
+        uses: braymond-dev/gistory@v1
+        with:
+          provider: openai-compatible
+          model: gpt-4.1-mini
+          append: true
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Commit updated history
+        if: steps.gistory.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add GISTORY.md
+          git commit -m "docs: update Gistory"
+          git push
+```
+
+Copy [`examples/github-actions/gistory.yml`](examples/github-actions/gistory.yml)
+to `.github/workflows/gistory.yml` in the consuming project. Add an
+`OPENAI_API_KEY` repository secret, then publish a `v1` tag for this repository
+so `uses: braymond-dev/gistory@v1` resolves.
+
+For Bedrock, Azure, or Vertex, authenticate with the relevant official login
+action before the Gistory step and select the corresponding provider/model.
