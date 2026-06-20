@@ -104,6 +104,10 @@ markers causes generation to stop instead of duplicating history. Use
 `gistory generate --fresh` to rebuild a clean marked file. Supplying `--range`
 or `--since` also performs a marked rebuild of that selected history.
 
+The configured output path is always excluded from commit summaries. Commits
+that only update `GISTORY.md` are skipped, and mixed commits retain only their
+non-generated files and diffs in the model prompt.
+
 The default provider is `ollama`, which sends commit summaries to the local
 Ollama API at `http://localhost:11434/api/generate`.
 
@@ -194,6 +198,10 @@ Gistory can run as a reusable action in another repository. The checkout must
 include full history, and provider credentials stay in the consuming
 repository's secrets or cloud authentication steps.
 
+`GISTORY.md` is intended to be committed when using this workflow. Do not add
+it to the consuming repository's `.gitignore`; the committed file provides the
+durable narrative and segment markers used by later runs.
+
 ```yaml
 name: Update Gistory
 
@@ -239,3 +247,9 @@ so `uses: braymond-dev/gistory@v1` resolves.
 
 For Bedrock, Azure, or Vertex, authenticate with the relevant official login
 action before the Gistory step and select the corresponding provider/model.
+
+Screenshots referenced by `GISTORY.md` must also have durable locations. CI
+workspace files and ordinary build artifacts disappear or expire after the
+run, so images must either be committed alongside the history or uploaded to
+stable storage whose URLs can be written into the Markdown. Gistory does not
+currently ingest screenshot manifests.

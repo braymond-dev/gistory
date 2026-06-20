@@ -164,14 +164,29 @@ def _summarize_commits(
 ) -> list[CommitSummary]:
     reader = GitReader(repo_path)
     selected_provider = provider or build_provider(config)
+    ignore = _effective_ignore(config, repo_path)
     commit_summaries: list[CommitSummary] = []
     for commit in reader.read_commits(revision_range=revision_range, since=since):
-        prepared = prepare_commit_for_summary(commit, config.ignore)
+        prepared = prepare_commit_for_summary(commit, ignore)
         if prepared is None:
             continue
         summary = summarize_commit(prepared, selected_provider)
         commit_summaries.append(CommitSummary(commit=prepared, summary=summary))
     return commit_summaries
+
+
+def _effective_ignore(config: GistoryConfig, repo_path: Path | str) -> list[str]:
+    ignore = list(config.ignore)
+    output_path = Path(config.output)
+    if output_path.is_absolute():
+        try:
+            output_path = output_path.resolve().relative_to(Path(repo_path).resolve())
+        except ValueError:
+            return ignore
+    output_pattern = output_path.as_posix().lstrip("./")
+    if output_pattern and output_pattern not in ignore:
+        ignore.append(output_pattern)
+    return ignore
 
 
 def write_history(markdown: str, output_path: Path | str) -> None:

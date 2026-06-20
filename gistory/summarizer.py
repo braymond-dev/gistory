@@ -42,9 +42,15 @@ def prepare_commit_for_summary(commit: CommitInfo, ignore: list[str]) -> CommitI
     files = filter_paths(commit.files_changed, ignore)
     if not files:
         return None
+    filtered_files = len(files) != len(commit.files_changed)
     return replace(
         commit,
         files_changed=files,
+        diff_summary=(
+            f"{len(files)} relevant file{'s' if len(files) != 1 else ''} changed"
+            if filtered_files
+            else commit.diff_summary
+        ),
         diff=filter_diff_by_ignored_files(commit.diff, ignore),
     )
 

@@ -22,3 +22,9 @@ def test_consumer_workflow_uses_full_git_history() -> None:
     assert "uses: braymond-dev/gistory@v1" in workflow
     assert "OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}" in workflow
     assert "if: steps.gistory.outputs.changed == 'true'" in workflow
+
+
+def test_gistory_output_is_not_ignored() -> None:
+    ignored = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+
+    assert "GISTORY.md" not in ignored

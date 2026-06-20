@@ -38,6 +38,38 @@ def test_generate_history_filters_ignored_commits_and_uses_mock_provider(tmp_pat
     assert "Build assets" not in markdown
 
 
+def test_generate_history_automatically_ignores_output_only_commits(tmp_path: Path) -> None:
+    git(tmp_path, "init")
+    git(tmp_path, "config", "user.email", "ada@example.com")
+    git(tmp_path, "config", "user.name", "Ada Lovelace")
+    commit_file(tmp_path, "src/app.py", "print('hello')\n", "Add app")
+    commit_file(tmp_path, "GISTORY.md", "# Generated history\n", "Update generated history")
+    config = GistoryConfig(provider="mock")
+
+    markdown = generate_history(config, repo_path=tmp_path)
+
+    assert "Add app touching src/app.py." in markdown
+    assert "Update generated history" not in markdown
+    assert "GISTORY.md" not in markdown
+
+
+def test_generate_history_filters_output_from_mixed_commit(tmp_path: Path) -> None:
+    git(tmp_path, "init")
+    git(tmp_path, "config", "user.email", "ada@example.com")
+    git(tmp_path, "config", "user.name", "Ada Lovelace")
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src/app.py").write_text("print('hello')\n", encoding="utf-8")
+    (tmp_path / "GISTORY.md").write_text("# Generated history\n", encoding="utf-8")
+    git(tmp_path, "add", "src/app.py", "GISTORY.md")
+    git(tmp_path, "commit", "-m", "Add app and generated history")
+    config = GistoryConfig(provider="mock")
+
+    markdown = generate_history(config, repo_path=tmp_path)
+
+    assert "Add app and generated history touching src/app.py." in markdown
+    assert "GISTORY.md" not in markdown
+
+
 def test_generate_history_document_is_marked_for_future_appends(tmp_path: Path) -> None:
     git(tmp_path, "init")
     git(tmp_path, "config", "user.email", "ada@example.com")
