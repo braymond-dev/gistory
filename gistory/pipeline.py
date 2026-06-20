@@ -91,7 +91,35 @@ def generate_history(
     return render_markdown(sections)
 
 
-def generate_history_append_only(
+def generate_history_document(
+    config: GistoryConfig,
+    repo_path: Path | str = ".",
+    revision_range: str | None = None,
+    since: str | None = None,
+    provider: SummaryProvider | None = None,
+) -> str:
+    """Generate a complete file with markers suitable for later appends."""
+    if revision_range and since:
+        raise ValueError("Use either --range or --since, not both")
+
+    summaries = _summarize_commits(
+        config,
+        repo_path=repo_path,
+        revision_range=revision_range,
+        since=since,
+        provider=provider,
+    )
+    segment = render_segment(
+        group_by_month(summaries),
+        start_hash=summaries[-1].commit.short_hash if summaries else None,
+        end_hash=summaries[0].commit.short_hash if summaries else None,
+    )
+    if not segment:
+        return "# Gistory\n\nNo commits found.\n"
+    return append_segment("", segment)
+
+
+def update_history_document(
     config: GistoryConfig,
     repo_path: Path | str = ".",
     revision_range: str | None = None,
@@ -99,11 +127,16 @@ def generate_history_append_only(
     provider: SummaryProvider | None = None,
 ) -> str:
     if revision_range or since:
-        raise ValueError("Append-only mode manages the range from the existing output file")
+        raise ValueError("Incremental generation manages the range from the existing output file")
 
     output_path = Path(repo_path) / config.output
     existing = output_path.read_text(encoding="utf-8") if output_path.exists() else ""
     latest_hash = latest_segment_end(existing)
+    if existing.strip() and latest_hash is None:
+        raise ValueError(
+            f"{config.output} exists without Gistory segment markers; "
+            "use --fresh to rebuild it"
+        )
     incremental_range = f"{latest_hash}..HEAD" if latest_hash else None
     summaries = _summarize_commits(
         config,

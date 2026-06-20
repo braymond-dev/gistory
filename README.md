@@ -26,7 +26,7 @@ gistory generate --since "30 days ago"
 gistory generate --range "HEAD~20..HEAD"
 gistory generate --repo ../wikiwatch
 gistory generate --out GISTORY.md
-gistory generate --append
+gistory generate --fresh
 gistory generate --provider ollama --model qwen3:8b
 gistory generate --ollama-url http://localhost:11434
 gistory generate --ollama-timeout 300
@@ -48,7 +48,6 @@ gistory explain --range "HEAD~10..HEAD"
 
 ```yaml
 output: GISTORY.md
-append_only: false
 provider: ollama
 model: qwen3:8b
 ollama_url: http://localhost:11434
@@ -84,11 +83,12 @@ ignore:
 
 ## Providers
 
-Append-only mode preserves the existing `GISTORY.md` and adds a new hidden
-marker-delimited segment for commits after the last generated segment:
+Every generated `GISTORY.md` contains hidden commit-hash markers. On the first
+run Gistory creates a complete marked history; later runs automatically add a
+new segment for commits after the last marker:
 
 ```bash
-gistory generate --append
+gistory generate
 ```
 
 The markers use commit hashes:
@@ -99,7 +99,10 @@ The markers use commit hashes:
 <!-- gistory:segment-end -->
 ```
 
-Append-only mode cannot be combined with `--range` or `--since`.
+Markers are always enabled and cannot be toggled. An existing output without
+markers causes generation to stop instead of duplicating history. Use
+`gistory generate --fresh` to rebuild a clean marked file. Supplying `--range`
+or `--since` also performs a marked rebuild of that selected history.
 
 The default provider is `ollama`, which sends commit summaries to the local
 Ollama API at `http://localhost:11434/api/generate`.
@@ -216,7 +219,6 @@ jobs:
         with:
           provider: openai-compatible
           model: gpt-4.1-mini
-          append: true
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 

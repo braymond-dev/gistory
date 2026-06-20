@@ -2,7 +2,7 @@ import subprocess
 from pathlib import Path
 
 from gistory.config import GistoryConfig
-from gistory.pipeline import build_provider, generate_history, generate_history_append_only
+from gistory.pipeline import build_provider, generate_history, generate_history_document, update_history_document
 from gistory.providers.azure import AzureProvider
 from gistory.providers.bedrock import BedrockProvider
 from gistory.providers.openai_compatible import OpenAICompatibleProvider
@@ -38,7 +38,20 @@ def test_generate_history_filters_ignored_commits_and_uses_mock_provider(tmp_pat
     assert "Build assets" not in markdown
 
 
-def test_generate_history_append_only_adds_only_new_segment(tmp_path: Path) -> None:
+def test_generate_history_document_is_marked_for_future_appends(tmp_path: Path) -> None:
+    git(tmp_path, "init")
+    git(tmp_path, "config", "user.email", "ada@example.com")
+    git(tmp_path, "config", "user.name", "Ada Lovelace")
+    commit_file(tmp_path, "src/app.py", "print('hello')\n", "Add app")
+    config = GistoryConfig(provider="mock")
+
+    markdown = generate_history_document(config, repo_path=tmp_path)
+
+    assert markdown.startswith("# Gistory\n\n<!-- gistory:segment start=")
+    assert markdown.rstrip().endswith("<!-- gistory:segment-end -->")
+
+
+def test_update_history_document_adds_only_new_segment(tmp_path: Path) -> None:
     git(tmp_path, "init")
     git(tmp_path, "config", "user.email", "ada@example.com")
     git(tmp_path, "config", "user.name", "Ada Lovelace")
@@ -58,16 +71,16 @@ def test_generate_history_append_only_adds_only_new_segment(tmp_path: Path) -> N
     )
     (tmp_path / "GISTORY.md").write_text(existing, encoding="utf-8")
     commit_file(tmp_path, "src/feature.py", "print('feature')\n", "Add feature")
-    config = GistoryConfig(provider="mock", append_only=True)
+    config = GistoryConfig(provider="mock")
 
-    markdown = generate_history_append_only(config, repo_path=tmp_path)
+    markdown = update_history_document(config, repo_path=tmp_path)
 
     assert "Add app.\n\n<!-- gistory:segment-end -->" in markdown
     assert "Add feature touching src/feature.py." in markdown
     assert markdown.count("gistory:segment start=") == 2
 
 
-def test_generate_history_append_only_returns_existing_when_no_new_commits(tmp_path: Path) -> None:
+def test_update_history_document_returns_existing_when_no_new_commits(tmp_path: Path) -> None:
     git(tmp_path, "init")
     git(tmp_path, "config", "user.email", "ada@example.com")
     git(tmp_path, "config", "user.name", "Ada Lovelace")
@@ -81,9 +94,41 @@ def test_generate_history_append_only_returns_existing_when_no_new_commits(tmp_p
     ).stdout.strip()
     existing = f"# Gistory\n\n<!-- gistory:segment start={head} end={head} -->\n\nDone.\n\n<!-- gistory:segment-end -->\n"
     (tmp_path / "GISTORY.md").write_text(existing, encoding="utf-8")
-    config = GistoryConfig(provider="mock", append_only=True)
+    config = GistoryConfig(provider="mock")
 
-    assert generate_history_append_only(config, repo_path=tmp_path) == existing
+    assert update_history_document(config, repo_path=tmp_path) == existing
+
+
+def test_update_history_document_rejects_unmarked_existing_output(tmp_path: Path) -> None:
+    git(tmp_path, "init")
+    git(tmp_path, "config", "user.email", "ada@example.com")
+    git(tmp_path, "config", "user.name", "Ada Lovelace")
+    commit_file(tmp_path, "src/app.py", "print('hello')\n", "Add app")
+    (tmp_path / "GISTORY.md").write_text("# Gistory\n\nUnmarked history.\n", encoding="utf-8")
+    config = GistoryConfig(provider="mock")
+
+    try:
+        update_history_document(config, repo_path=tmp_path)
+    except ValueError as exc:
+        assert "without Gistory segment markers" in str(exc)
+        assert "--fresh" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError")
+
+
+def test_generate_history_document_replaces_existing_output_when_written(tmp_path: Path) -> None:
+    git(tmp_path, "init")
+    git(tmp_path, "config", "user.email", "ada@example.com")
+    git(tmp_path, "config", "user.name", "Ada Lovelace")
+    commit_file(tmp_path, "src/app.py", "print('hello')\n", "Add app")
+    (tmp_path / "GISTORY.md").write_text("# Gistory\n\nOld duplicate content.\n", encoding="utf-8")
+    config = GistoryConfig(provider="mock")
+
+    markdown = generate_history_document(config, repo_path=tmp_path)
+
+    assert "Old duplicate content" not in markdown
+    assert markdown.count("gistory:segment start=") == 1
+    assert "Add app touching src/app.py." in markdown
 
 
 def test_generate_history_rejects_range_and_since_together(tmp_path: Path) -> None:

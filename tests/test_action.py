@@ -11,7 +11,7 @@ def test_composite_action_metadata() -> None:
 
     assert action["runs"]["using"] == "composite"
     assert action["inputs"]["provider"]["required"] is True
-    assert action["inputs"]["append"]["default"] == "true"
+    assert "append" not in action["inputs"]
     assert action["outputs"]["changed"]["value"] == "${{ steps.result.outputs.changed }}"
 
 

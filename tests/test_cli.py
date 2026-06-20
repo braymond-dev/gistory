@@ -26,7 +26,9 @@ def test_generate_repo_writes_relative_output_inside_target_repo(tmp_path: Path)
     assert result.exit_code == 0
     assert "Wrote GISTORY.md took" in result.output
     assert (tmp_path / "GISTORY.md").exists()
-    assert "Add app touching app.py." in (tmp_path / "GISTORY.md").read_text(encoding="utf-8")
+    output = (tmp_path / "GISTORY.md").read_text(encoding="utf-8")
+    assert "Add app touching app.py." in output
+    assert "gistory:segment start=" in output
 
 
 def test_format_duration() -> None:

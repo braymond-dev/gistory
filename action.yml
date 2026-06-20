@@ -17,11 +17,6 @@ inputs:
     description: Output path relative to the target repository.
     required: false
     default: GISTORY.md
-  append:
-    description: Only summarize commits after the last Gistory segment marker.
-    required: false
-    default: "true"
-
 outputs:
   changed:
     description: Whether the generated output differs from the checked-out file.
@@ -49,7 +44,6 @@ runs:
         GISTORY_MODEL: ${{ inputs.model }}
         GISTORY_CONFIG: ${{ inputs.config }}
         GISTORY_OUTPUT: ${{ inputs.output }}
-        GISTORY_APPEND: ${{ inputs.append }}
       run: |
         args=(
           generate
@@ -59,13 +53,6 @@ runs:
           --provider "$GISTORY_PROVIDER"
           --model "$GISTORY_MODEL"
         )
-
-        if [[ "$GISTORY_APPEND" == "true" ]]; then
-          args+=(--append)
-        else
-          args+=(--no-append)
-        fi
-
         gistory "${args[@]}"
 
     - name: Report result
